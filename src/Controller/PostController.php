@@ -9,7 +9,9 @@ use App\Entity\PostUpvote;
 use App\Entity\User;
 use App\Form\CommentType;
 use App\Form\PostType;
+use App\Repository\PostDownvoteRepository;
 use App\Repository\PostRepository;
+use App\Repository\PostUpvoteRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\Expr\Func;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -22,7 +24,9 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 final class PostController extends AbstractController
 {
     #[Route('/{id}', name: 'app_post_show', methods: ['GET'])]
-    public function show(Post $post, PostRepository $postRepository): Response
+    public function show(
+        Post $post, PostDownvoteRepository $postDownvoteRepository, PostUpvoteRepository $postUpvoteRepository,
+         PostRepository $postRepository): Response
     {
         $comment = new Comment();
         $comment->setAuthor($this->getUser());
@@ -35,6 +39,8 @@ final class PostController extends AbstractController
             'post' => $post,
             'upvotesCount' => $postRepository->countUpvotes($post->getId()),
             'downvotesCount' => $postRepository->countDownvotes($post->getId()),
+            'hasUpvoted' => $postUpvoteRepository->findOneBy(['post' => $post, 'user' => $this->getUser()]) !== null,
+            'hasDownvoted' => $postDownvoteRepository->findOneBy(['post' => $post, 'user' => $this->getUser()]) !==null,
             'form' => $form,
         ]);
     }
@@ -89,30 +95,57 @@ final class PostController extends AbstractController
     }
 
     #[Route('/{id}/upvote', name: 'app_post_upvote', methods: ['GET'])]
-    public function upvote(#[CurrentUser()] User $user, Post $post, EntityManagerInterface $entityManager): Response
+    public function upvote(#[CurrentUser()] User $user, Post $post,
+     EntityManagerInterface $entityManager, PostDownvoteRepository $postDownvoteRepository, PostUpvoteRepository $postUpvoteRepository): Response
     {
-        $postUpvote = new PostUpvote();
-        $postUpvote
-            ->setPost($post)
-            ->setUser($user)
-        ;
+        $downvote = $postDownvoteRepository->findOneBy(['user' => $user, 'post' => $post]);
 
-        $entityManager->persist($postUpvote);
+        if ($downvote !== null) {
+            $entityManager->remove($downvote);
+        }
+
+        $upvote = $postUpvoteRepository->findOneBy(['post' => $post, 'user' => $user]);
+
+        if ($upvote !== null) {
+            $entityManager->remove($upvote);
+        } else {
+            $postUpvote = new PostUpvote();
+            $postUpvote
+                ->setPost($post)
+                ->setUser($user)
+            ;
+            $entityManager->persist($postUpvote);
+        }
+
         $entityManager->flush();
 
         return $this->redirectToRoute('app_post_show', ['id' => $post->getId()]);
     }
 
     #[Route('/{id}/downvote', name: 'app_post_downvote', methods: ['GET'])]
-    public function downvote(#[CurrentUser()] User $user, Post $post, EntityManagerInterface $entityManager): Response
+    public function downvote(#[CurrentUser()] User $user, Post $post, 
+    EntityManagerInterface $entityManager, PostUpvoteRepository $postUpvoteRepository, PostDownvoteRepository $postDownvoteRepository): Response
     {
-        $postDownvote = new PostDownvote();
-        $postDownvote
-            ->setPost($post)
-            ->setUser($user)
-        ;
+        $upvote = $postUpvoteRepository->findOneBy(['user' => $user, 'post' => $post]);
 
-        $entityManager->persist($postDownvote);
+        if ($upvote !== null) {
+            $entityManager->remove($upvote);
+        }
+
+        $downvote = $postDownvoteRepository->findOneBy(['post' => $post, 'user' => $user]);
+        
+        if ($downvote !== null) {
+            $entityManager->remove($downvote);
+        } else {
+            $postDownvote = new PostDownvote();
+            $postDownvote
+                ->setPost($post)
+                ->setUser($user)
+            ;
+            
+            $entityManager->persist($postDownvote);
+        }
+
         $entityManager->flush();
 
         return $this->redirectToRoute('app_post_show', ['id' => $post->getId()]);
