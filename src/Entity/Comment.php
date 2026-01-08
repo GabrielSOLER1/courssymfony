@@ -43,13 +43,20 @@ class Comment
     /**
      * @var Collection<int, CommentUpvote>
      */
-    #[ORM\OneToMany(targetEntity: CommentUpvote::class, mappedBy: 'comment')]
+    #[ORM\OneToMany(targetEntity: CommentUpvote::class, mappedBy: 'comment', orphanRemoval: true)]
     private Collection $upvotes;
+
+    /**
+     * @var Collection<int, CommentDownvote>
+     */
+    #[ORM\OneToMany(targetEntity: CommentDownvote::class, mappedBy: 'comment', orphanRemoval: true)]
+    private Collection $downvotes;
 
     public function __construct()
     {
         $this->Replies = new ArrayCollection();
         $this->upvotes = new ArrayCollection();
+        $this->downvotes = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -177,6 +184,36 @@ class Comment
             // set the owning side to null (unless already changed)
             if ($upvote->getComment() === $this) {
                 $upvote->setComment(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CommentDownvote>
+     */
+    public function getDownvotes(): Collection
+    {
+        return $this->downvotes;
+    }
+
+    public function addDownvote(CommentDownvote $downvote): static
+    {
+        if (!$this->downvotes->contains($downvote)) {
+            $this->downvotes->add($downvote);
+            $downvote->setComment($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDownvote(CommentDownvote $downvote): static
+    {
+        if ($this->downvotes->removeElement($downvote)) {
+            // set the owning side to null (unless already changed)
+            if ($downvote->getComment() === $this) {
+                $downvote->setComment(null);
             }
         }
 
