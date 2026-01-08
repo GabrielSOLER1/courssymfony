@@ -4,6 +4,8 @@ namespace App\Controller;
 
 use App\Entity\Comment;
 use App\Entity\Post;
+use App\Entity\PostUpvote;
+use App\Entity\User;
 use App\Form\CommentType;
 use App\Form\PostType;
 use App\Repository\PostRepository;
@@ -13,12 +15,13 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/post')]
 final class PostController extends AbstractController
 {
     #[Route('/{id}', name: 'app_post_show', methods: ['GET'])]
-    public function show(Post $post, Request $request, EntityManagerInterface $entityManager): Response
+    public function show(Post $post, PostRepository $postRepository): Response
     {
         $comment = new Comment();
         $comment->setAuthor($this->getUser());
@@ -29,11 +32,12 @@ final class PostController extends AbstractController
 
         return $this->render('post/show.html.twig', [
             'post' => $post,
+            'upvotesCount' => $postRepository->countUpvotes($post->getId()),
             'form' => $form,
         ]);
     }
 
-    #[Route('/{id}/comment/new', methods: ['POST'])]
+    #[Route('/{id}/comment/new', name: 'app_post_comment_new', methods: ['POST'])]
     public function comment(Post $post, Request $request, EntityManagerInterface $entityManager): Response
     {
         $comment = new Comment();
@@ -79,5 +83,21 @@ final class PostController extends AbstractController
         }
 
         return $this->redirectToRoute('app_post_show', ['id' => $post->getId()], Response::HTTP_SEE_OTHER);
+    
+    }
+
+    #[Route('/{id}/upvote', name: 'app_post_upvote', methods: ['GET'])]
+    public function upvote(#[CurrentUser()] User $user, Post $post, EntityManagerInterface $entityManager): Response
+    {
+        $postUpvote = new PostUpvote();
+        $postUpvote
+            ->setPost($post)
+            ->setUser($user)
+        ;
+
+        $entityManager->persist($postUpvote);
+        $entityManager->flush();
+
+        return $this->redirectToRoute('app_post_show', ['id' => $post->getId()]);
     }
 }

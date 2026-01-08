@@ -24,10 +24,10 @@
                 <h1>{{ post.title }}</h1>
                 <p class="lead">{{ post.content }}</p>
                 <div class="mb-5">
-                    <button class="btn btn-secondary rounded-pill btn-sm">
+                    <a href="{{ path('app_post_upvote', { id: post.id }) }}" class="btn btn-secondary rounded-pill btn-sm">
                         <i class="fa-solid fa-up"></i>
-                        Upvote
-                    </button>
+                        {{ upvotesCount }}
+                    </a>
                     <button class="btn btn-secondary rounded-pill btn-sm">
                         <i class="fa-solid fa-down"></i>
                         Downvote
@@ -57,6 +57,46 @@
                     {{ form_widget(form.post, { value: post.id }) }}
                 {{ form_end(form) }}
 
+                <ul class="list-unstyled">
+                    {% for comment in post.comments %}
+                        <li>
+                            <div class="row gx-1 mb-3">
+                                <div class="col-auto">
+                                    <i class="fa-solid fa-circle-user fs-1 text-primary"></i>
+                                </div>
+
+                                <div class="col">
+                                    <b>{{ comment.author.email }}</b>
+                                    <div class="mb-2">
+                                        {{ comment.content }}
+                                    </div>
+
+                                    <div>
+                                        <div>
+                                            <button class="btn btn-secondary rounded-pill btn-sm">
+                                                <i class="fa-solid fa-up"></i>
+                                                Upvote
+                                            </button>
+                                            <button class="btn btn-secondary rounded-pill btn-sm">
+                                                <i class="fa-solid fa-down"></i>
+                                                Downvote
+                                            </button>
+                                            <button class="btn btn-secondary rounded-pill btn-sm">
+                                                <i class="fa-solid fa-comment"></i>
+                                                Commentaires
+                                            </button>
+                                            <button class="btn btn-secondary rounded-pill btn-sm">
+                                                <i class="fa-solid fa-share"></i>
+                                                Partager
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                </ul>
             </div>
 
             
