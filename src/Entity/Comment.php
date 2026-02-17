@@ -2,43 +2,76 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 use App\Repository\CommentRepository;
+use App\Entity\Post as EntityPost;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
+#[ApiResource(
+    operations: [
+        new Get(
+            normalizationContext: ['groups' => ['comment:read']]
+            ),
+        new GetCollection(
+            normalizationContext: ['groups' => ['comment:read']]
+            ),
+        new Post(
+            denormalizationContext: ['groups' => ['comment:write']], 
+            normalizationContext: ['groups' => ['comment:read']], 
+            // security: 'is_granted("ROLE_USER")'
+            ),
+        new Patch(
+            denormalizationContext: ['groups' => ['comment:write']],
+            normalizationContext: ['groups' => ['comment:read']],
+            // security: 'is_granted("ROLE_USER")',
+        ),
+
+    ],
+)]
 #[ORM\HasLifecycleCallbacks]
 #[ORM\Entity(repositoryClass: CommentRepository::class)]
 class Comment
 {
+    #[Groups('comment:read')]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Groups(['comment:read', 'comment:write'])]
     #[ORM\Column(type: Types::TEXT)]
     private ?string $content = null;
 
+    #[Groups(['comment:read'])]
     #[ORM\Column]
     private ?\DateTimeImmutable $postedAt = null;
 
+    #[Groups(['comment:read'])]
     #[ORM\ManyToOne(inversedBy: 'comments')]
     #[ORM\JoinColumn(nullable: false)]
     private ?User $author = null;
 
+    #[Groups(['comment:read'])]
     #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'Replies')]
     private ?self $parent = null;
 
     /**
      * @var Collection<int, self>
      */
-    #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'parent')]
+    #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'parent', orphanRemoval: true)]
     private Collection $Replies;
 
     #[ORM\ManyToOne(inversedBy: 'comments')]
-    private ?Post $post = null;
+    private ?EntityPost $post = null;
 
     /**
      * @var Collection<int, CommentUpvote>
@@ -148,12 +181,12 @@ class Comment
         return $this;
     }
 
-    public function getPost(): ?Post
+    public function getPost(): ?EntityPost
     {
         return $this->post;
     }
 
-    public function setPost(?Post $post): static
+    public function setPost(?EntityPost $post): static
     {
         $this->post = $post;
 

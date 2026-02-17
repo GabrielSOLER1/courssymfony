@@ -2,36 +2,75 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post as userPost;
 use App\Repository\UserRepository;
+use App\State\UserCurrentProvider;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Serializer\Attribute\Groups;
+
+
+#[ApiResource(
+    operations: [
+        new Get(
+            uriTemplate: '/users/current',
+            normalizationContext: ['groups' => ['user:read']],
+            provider: UserCurrentProvider::class,
+        ),
+        new Get(
+            normalizationContext: ['groups' => ['user:read']]
+            ),
+        // new GetCollection(
+        //     normalizationContext: ['groups' => ['user:read']]
+        //     ),
+        new userPost (
+            denormalizationContext: ['groups' => ['user:write']], 
+            normalizationContext: ['groups' => ['user:read']], 
+            // security: 'is_granted("ROLE_USER")'
+            ),
+        new Patch(
+            denormalizationContext: ['groups' => ['user:write']],
+            normalizationContext: ['groups' => ['user:read']],
+            // security: 'is_granted("ROLE_USER")',
+        ),
+
+    ],
+)]
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    #[Groups('user:read')]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Groups('user:read')]
     #[ORM\Column(length: 180)]
     private ?string $email = null;
 
     /**
      * @var list<string> The user roles
      */
+    #[Groups('user:read')]
     #[ORM\Column]
     private array $roles = [];
 
     /**
      * @var string The hashed password
      */
+    // #[Groups('user:read')]
     #[ORM\Column]
     private ?string $password = null;
 
