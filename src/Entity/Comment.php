@@ -5,6 +5,7 @@ namespace App\Entity;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Repository\CommentRepository;
@@ -22,7 +23,9 @@ use Symfony\Component\Serializer\Attribute\Groups;
             normalizationContext: ['groups' => ['comment:read']]
             ),
         new GetCollection(
-            normalizationContext: ['groups' => ['comment:read']]
+            uriTemplate:'/posts/{id}/comments',
+            uriVariables: ['id' => new Link(fromClass: EntityPost::class, fromProperty: 'comments')],
+            normalizationContext: ['groups' => ['comment:read', 'user:read']]
             ),
         new Post(
             denormalizationContext: ['groups' => ['comment:write']], 
